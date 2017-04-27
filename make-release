@@ -1,0 +1,69 @@
+#!/bin/bash
+
+set -e
+
+VERSION=$1
+
+if test -z "$VERSION";then
+	echo "Use as make-release VERSION"
+	exit 1
+fi
+
+PACKAGE=libp11
+# Initial variables which help the scripts share
+RELEASE_SPEC=$PWD/$PACKAGE.spec
+RELEASE_SRPM_DIR=$PWD/_release/srpm
+RELEASE_SOURCE=$PWD/_release/source
+RELEASE_DEBIAN_REPO=$PWD/_release/debian-apt
+TOOLS_DIR=$PWD
+SCRIPTS_DIR=/home/nmavrogi/cvs/cockpituous-mine/release
+
+#rm -rf $RELEASE_SOURCE
+mkdir -p $RELEASE_SOURCE
+
+pushd $RELEASE_SOURCE
+
+if ! test -f "$PACKAGE-$VERSION.tar.gz";then
+	wget https://github.com/OpenSC/libp11/releases/download/$PACKAGE-$VERSION/$PACKAGE-$VERSION.tar.gz
+fi
+
+if ! test -f "$PACKAGE-$VERSION.tar.gz.asc";then
+	wget https://github.com/OpenSC/libp11/releases/download/$PACKAGE-$VERSION/$PACKAGE-$VERSION.tar.gz.asc
+fi
+
+gpg --verify $PACKAGE-$VERSION.tar.gz.asc
+
+cp $TOOLS_DIR/patches/*.patch . || true
+
+cp $TOOLS_DIR/files/* . || true
+
+popd
+
+# Build the source tarball patches and srpm
+
+rm -rf $RELEASE_SRPM_DIR
+mkdir -p $RELEASE_SRPM_DIR
+pushd $RELEASE_SRPM_DIR
+export RELEASE_SOURCE
+export RELEASE_TAG="$VERSION"
+export RELEASE_SPEC
+export RELEASE_PATCH=1
+export RELEASE_SOURCE="$RELEASE_SOURCE/"
+
+
+$SCRIPTS_DIR/release-srpm
+popd
+
+RELEASE_SRPM=$(ls $RELEASE_SRPM_DIR/$PACKAGE-*.src.rpm)
+
+# Do fedora builds for the tag, using tarball
+#$SCRIPTS_DIR/release-koji -v -p $RELEASE_SRPM f25
+$SCRIPTS_DIR/release-koji -v -p $RELEASE_SRPM master
+$SCRIPTS_DIR/release-koji -v -p $RELEASE_SRPM f26
+$SCRIPTS_DIR/release-koji -v -p $RELEASE_SRPM epel7
+
+export RELEASE_SRPM
+$SCRIPTS_DIR/release-bodhi f26
+$SCRIPTS_DIR/release-bodhi epel7
+#$SCRIPTS_DIR/release-bodhi f25
+
