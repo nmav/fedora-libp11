@@ -1,3 +1,9 @@
+%if 0%{?fedora}
+%define enginesdir %{_libdir}/engines-1.1
+%else
+%define enginesdir %{_libdir}/openssl/engines
+%endif
+
 Name:           libp11
 Version:        0.4.2
 Release:        1%{?dist}
@@ -14,9 +20,16 @@ BuildRequires:  doxygen graphviz
 BuildRequires:  libtool-ltdl-devel
 BuildRequires:  openssl-devel
 BuildRequires:  pkgconfig
+%if 0%{?fedora}
 BuildRequires:  autoconf automake libtool
 # needed for testsuite
 BuildRequires:  softhsm opensc
+%else
+%ifnarch ppc ppc64 ppc64le
+BuildRequires:  softhsm opensc
+%endif
+%endif
+
 
 %description
 Libp11 is a library implementing a small layer on top of PKCS#11 API to
@@ -26,7 +39,10 @@ make using PKCS#11 implementations easier.
 Summary:        Files for developing with %{name}
 Group:          Development/Libraries
 Requires:       %{name} = %{version}-%{release}
+
+%if 0%{?fedora}
 Conflicts: compat-openssl10-devel < 1:1.1.0
+%endif
 
 %description devel
 The %{name}-devel package contains libraries and header files for
@@ -39,10 +55,17 @@ License: BSD
 
 BuildRequires:  openssl-devel pkgconfig
 BuildRequires:  pkgconfig(p11-kit-1)
+%if 0%{?fedora}
 BuildRequires:  softhsm opensc
+Recommends:	p11-kit-trust
+%else
+%ifnarch ppc ppc64 ppc64le
+BuildRequires:  softhsm opensc
+Requires:	p11-kit-trust
+%endif
+%endif
 Requires:       openssl > 0.9.6
 Requires:	%{name} = %{version}-%{release}
-Recommends:	p11-kit-trust
 
 %description -n engine_pkcs11
 Engine_pkcs11 is an implementation of an engine for OpenSSL. It can be loaded
@@ -54,12 +77,14 @@ cards and software for using smart cards in PKCS#11 format, such as OpenSC.
 %setup -q
 
 %build
+%if 0%{?fedora}
 autoreconf -fvi
-%configure --disable-static --enable-api-doc --with-enginesdir=%{_libdir}/engines-1.1
+%endif
+%configure --disable-static --enable-api-doc --with-enginesdir=%{enginesdir}
 make V=1 %{?_smp_mflags}
 
 %install
-mkdir -p $RPM_BUILD_ROOT%{_libdir}/engines-1.1
+mkdir -p $RPM_BUILD_ROOT%{enginesdir}
 #make install DESTDIR=$RPM_BUILD_ROOT INSTALL="install -p"
 make install DESTDIR=$RPM_BUILD_ROOT
 
@@ -70,13 +95,15 @@ rm -rf $RPM_BUILD_ROOT%{_datadir}/doc/%{name}/
 
 # Remove libtool .la files
 rm -f $RPM_BUILD_ROOT%{_libdir}/*.la
-rm -f $RPM_BUILD_ROOT%{_libdir}/engines-1.1/*.la
+rm -f $RPM_BUILD_ROOT%{enginesdir}/*.la
 
 %clean
 rm -rf $RPM_BUILD_ROOT
 
 %check
+%if 0%{?fedora}
 make check %{?_smp_mflags}
+%endif
 
 %post -p /sbin/ldconfig
 
@@ -97,6 +124,6 @@ make check %{?_smp_mflags}
 %files -n engine_pkcs11
 %defattr(-,root,root,-)
 %doc NEWS
-%{_libdir}/engines-1.1/*.so
+%{enginesdir}/*.so
 
 %changelog
