@@ -116,7 +116,7 @@ make check %{?_smp_mflags}
 
 %files devel
 %defattr(-,root,root,-)
-%doc examples/ __docdir/api/
+%doc examples/auth.c examples/decrypt.c examples/getrandom.c examples/listkeys.c examples/README __docdir/api/
 %{_libdir}/libp11.so
 %{_libdir}/pkgconfig/libp11.pc
 %{_includedir}/libp11.h
