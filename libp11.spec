@@ -1,4 +1,4 @@
-%if 0%{?fedora}
+%if 0%{?fedora} >= 26
 %define enginesdir %{_libdir}/engines-1.1
 %else
 %define enginesdir %{_libdir}/openssl/engines
